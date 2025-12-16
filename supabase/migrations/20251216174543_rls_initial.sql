@@ -8,7 +8,25 @@ FOR SELECT
 USING (
   EXISTS (
     SELECT 1
-    FROM public.user_business_roles ub
+    FROM public.user_business_roles ubr
+    WHERE ubr.business_id = businesses.id
+      AND ubr.user_id = auth.uid()
+      AND ubr.role IN ('owner', 'admin')
+  )
+);
+
+-- INSERT (authenticated users can create businesses)
+CREATE POLICY businesses_insert
+ON public.businesses
+FOR INSERT
+WITH CHECK (auth.uid() IS NOT NULL);
+
+-- UPDATE (owners and admins can update)
+CREATE POLICY businesses_update
+ON public.businesses
+FOR UPDATE
+USING (
+  EXISTS (
     SELECT 1
     FROM public.user_business_roles ubr
     WHERE ubr.business_id = businesses.id
@@ -26,7 +44,7 @@ WITH CHECK (
   )
 );
 
--- DELETE (optional, often owner-only)
+-- DELETE (owners only)
 CREATE POLICY businesses_delete
 ON public.businesses
 FOR DELETE
@@ -41,23 +59,23 @@ USING (
 );
 
 -- USER_BUSINESS_ROLES TABLES --
-ALTER TABLE public.user_business_role ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_business_roles ENABLE ROW LEVEL SECURITY;
 
 -- SELECT (self visibility)
 CREATE POLICY ubr_select_self
-ON public.user_business_role
+ON public.user_business_roles
 FOR SELECT
 USING (user_id = auth.uid());
 
 -- INSERT / UPDATE / DELETE (admins & owners)
 CREATE POLICY ubr_manage
-ON public.user_business_role
+ON public.user_business_roles
 FOR ALL
 USING (
   EXISTS (
     SELECT 1
-    FROM public.user_business_role me
-    WHERE me.business_id = user_business_role.business_id
+    FROM public.user_business_roles me
+    WHERE me.business_id = user_business_roles.business_id
       AND me.user_id = auth.uid()
       AND me.role IN ('owner', 'admin')
   )
@@ -65,8 +83,8 @@ USING (
 WITH CHECK (
   EXISTS (
     SELECT 1
-    FROM public.user_business_role me
-    WHERE me.business_id = user_business_role.business_id
+    FROM public.user_business_roles me
+    WHERE me.business_id = user_business_roles.business_id
       AND me.user_id = auth.uid()
       AND me.role IN ('owner', 'admin')
   )
@@ -82,7 +100,7 @@ FOR SELECT
 USING (
   EXISTS (
     SELECT 1
-    FROM public.user_business_role ubr
+    FROM public.user_business_roles ubr
     WHERE ubr.business_id = reviews.business_id
       AND ubr.user_id = auth.uid()
   )
@@ -95,10 +113,10 @@ FOR INSERT
 WITH CHECK (
   EXISTS (
     SELECT 1
-    FROM public.user_business_role ubr
+    FROM public.user_business_roles ubr
     WHERE ubr.business_id = reviews.business_id
       AND ubr.user_id = auth.uid()
-      AND ubr.role IN ('owner', 'admin', 'member')
+      AND ubr.role IN ('owner', 'admin', 'staff')
   )
 );
 
@@ -109,7 +127,7 @@ FOR UPDATE
 USING (
   EXISTS (
     SELECT 1
-    FROM public.user_business_role ubr
+    FROM public.user_business_roles ubr
     WHERE ubr.business_id = reviews.business_id
       AND ubr.user_id = auth.uid()
       AND ubr.role IN ('owner', 'admin')
@@ -118,7 +136,7 @@ USING (
 WITH CHECK (
   EXISTS (
     SELECT 1
-    FROM public.user_business_role ubr
+    FROM public.user_business_roles ubr
     WHERE ubr.business_id = reviews.business_id
       AND ubr.user_id = auth.uid()
       AND ubr.role IN ('owner', 'admin')
@@ -132,7 +150,7 @@ FOR DELETE
 USING (
   EXISTS (
     SELECT 1
-    FROM public.user_business_role ubr
+    FROM public.user_business_roles ubr
     WHERE ubr.business_id = reviews.business_id
       AND ubr.user_id = auth.uid()
       AND ubr.role IN ('owner', 'admin')
@@ -141,62 +159,53 @@ USING (
 
 
 -- REVIEW_SOURCES TABLE --
-ALTER TABLE public.review_source ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.review_sources ENABLE ROW LEVEL SECURITY;
 
--- SELECT
-CREATE POLICY review_source_select
-ON public.review_source
+-- SELECT (all authenticated users can see review sources)
+CREATE POLICY review_sources_select
+ON public.review_sources
 FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1
-    FROM public.user_business_role ubr
-    WHERE ubr.business_id = review_source.business_id
-      AND ubr.user_id = auth.uid()
-  )
-);
+USING (auth.uid() IS NOT NULL);
 
--- INSERT / UPDATE / DELETE
-CREATE POLICY review_source_manage
-ON public.review_source
+-- INSERT / UPDATE / DELETE (only admins/owners can manage - global config)
+CREATE POLICY review_sources_manage
+ON public.review_sources
 FOR ALL
 USING (
   EXISTS (
     SELECT 1
-    FROM public.user_business_role ubr
-    WHERE ubr.business_id = review_source.business_id
-      AND ubr.user_id = auth.uid()
+    FROM public.user_business_roles ubr
+    WHERE ubr.user_id = auth.uid()
       AND ubr.role IN ('owner', 'admin')
   )
 )
 WITH CHECK (
   EXISTS (
     SELECT 1
-    FROM public.user_business_role ubr
-    WHERE ubr.business_id = review_source.business_id
-      AND ubr.user_id = auth.uid()
+    FROM public.user_business_roles ubr
+    WHERE ubr.user_id = auth.uid()
       AND ubr.role IN ('owner', 'admin')
   )
 );
 
--- USER_PROFILE TABLE --
-ALTER TABLE public.user_profile ENABLE ROW LEVEL SECURITY;
+-- USER_PROFILES TABLE --
+ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
 
 -- SELECT
-CREATE POLICY user_profile_select
-ON public.user_profile
+CREATE POLICY user_profiles_select
+ON public.user_profiles
 FOR SELECT
 USING (id = auth.uid());
 
 -- INSERT
-CREATE POLICY user_profile_insert
-ON public.user_profile
+CREATE POLICY user_profiles_insert
+ON public.user_profiles
 FOR INSERT
 WITH CHECK (id = auth.uid());
 
 -- UPDATE
-CREATE POLICY user_profile_update
-ON public.user_profile
+CREATE POLICY user_profiles_update
+ON public.user_profiles
 FOR UPDATE
 USING (id = auth.uid())
 WITH CHECK (id = auth.uid());
