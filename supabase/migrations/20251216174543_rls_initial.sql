@@ -11,7 +11,6 @@ USING (
     FROM public.user_business_roles ubr
     WHERE ubr.business_id = businesses.id
       AND ubr.user_id = auth.uid()
-      AND ubr.role IN ('owner', 'admin')
   )
 );
 
