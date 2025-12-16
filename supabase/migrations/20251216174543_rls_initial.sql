@@ -8,26 +8,9 @@ FOR SELECT
 USING (
   EXISTS (
     SELECT 1
-    FROM public.user_business_role ubr
-    WHERE ubr.business_id = businesses.id
-      AND ubr.user_id = auth.uid()
-  )
-);
-
--- INSERT (bootstrap only)
-CREATE POLICY businesses_insert
-ON public.businesses
-FOR INSERT
-WITH CHECK (auth.uid() IS NOT NULL);
-
--- UPDATE
-CREATE POLICY businesses_update
-ON public.businesses
-FOR UPDATE
-USING (
-  EXISTS (
+    FROM public.user_business_roles ub
     SELECT 1
-    FROM public.user_business_role ubr
+    FROM public.user_business_roles ubr
     WHERE ubr.business_id = businesses.id
       AND ubr.user_id = auth.uid()
       AND ubr.role IN ('owner', 'admin')
@@ -36,28 +19,28 @@ USING (
 WITH CHECK (
   EXISTS (
     SELECT 1
-    FROM public.user_business_role ubr
+    FROM public.user_business_roles ubr
     WHERE ubr.business_id = businesses.id
       AND ubr.user_id = auth.uid()
       AND ubr.role IN ('owner', 'admin')
   )
 );
 
--- DELETE
+-- DELETE (optional, often owner-only)
 CREATE POLICY businesses_delete
 ON public.businesses
 FOR DELETE
 USING (
   EXISTS (
     SELECT 1
-    FROM public.user_business_role ubr
+    FROM public.user_business_roles ubr
     WHERE ubr.business_id = businesses.id
       AND ubr.user_id = auth.uid()
       AND ubr.role = 'owner'
   )
 );
 
--- USER_BUSSINESS_ROLE TABLE --
+-- USER_BUSINESS_ROLES TABLES --
 ALTER TABLE public.user_business_role ENABLE ROW LEVEL SECURITY;
 
 -- SELECT (self visibility)
@@ -89,7 +72,7 @@ WITH CHECK (
   )
 );
 
--- REVIEWS TABLE --
+-- REVIEWS TABLES --
 ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
 
 -- SELECT
@@ -156,7 +139,8 @@ USING (
   )
 );
 
--- REVIEW_SOURCE TABLE --
+
+-- REVIEW_SOURCES TABLE --
 ALTER TABLE public.review_source ENABLE ROW LEVEL SECURITY;
 
 -- SELECT
